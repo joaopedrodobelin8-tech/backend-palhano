@@ -39,11 +39,15 @@ router.get('/dashboard', async (req, res, next) => {
             return d >= startOfDay;
         }).length;
 
-        const pipeline = safeStages.map(stage => ({
+        const pipeline = safeStages.map((stage, index) => ({
             id: stage.id,
             name: stage.name,
             color: stage.color,
-            count: safeLeads.filter(l => l.pipeline_stage_id === stage.id).length
+            count: safeLeads.filter(l => {
+                if (l.pipeline_stage_id === stage.id) return true;
+                if (index === 0 && !l.pipeline_stage_id) return true;
+                return false;
+            }).length
         }));
 
         const recent_leads = safeLeads.slice(0, 5);
@@ -97,8 +101,12 @@ router.get('/funnel', async (req, res, next) => {
         const safeLeads = leads || [];
         const total = safeLeads.length || 1;
 
-        const funnelData = (stages || []).map(stage => {
-            const stageLeads = safeLeads.filter(l => l.pipeline_stage_id === stage.id);
+        const funnelData = (stages || []).map((stage, index) => {
+            const stageLeads = safeLeads.filter(l => {
+                if (l.pipeline_stage_id === stage.id) return true;
+                if (index === 0 && !l.pipeline_stage_id) return true;
+                return false;
+            });
             return {
                 name: stage.name,
                 count: stageLeads.length,
@@ -124,9 +132,13 @@ router.get('/pipeline', async (req, res, next) => {
         const { data: leads, error: leadsError } = await supabase.from('leads').select('*').order('data_simulacao', { ascending: false });
         if (leadsError) throw leadsError;
 
-        const pipelineData = (stages || []).map(stage => ({
+        const pipelineData = (stages || []).map((stage, index) => ({
             ...stage,
-            leads: (leads || []).filter(l => l.pipeline_stage_id === stage.id)
+            leads: (leads || []).filter(l => {
+                if (l.pipeline_stage_id === stage.id) return true;
+                if (index === 0 && !l.pipeline_stage_id) return true;
+                return false;
+            })
         }));
 
         res.json(pipelineData);
