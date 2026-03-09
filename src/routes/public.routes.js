@@ -28,14 +28,15 @@ router.post('/simulacoes', submitLimiter, async (req, res) => {
         }
 
         const { data, error } = await supabase
-            .from('simulacoes')
+            .from('leads')
             .insert([{
                 tipo_consorcio,
                 valor_credito,
                 valor_parcela,
                 nome: nome || null,
                 whatsapp: whatsapp || null,
-                realizou_cadastro: !!realizou_cadastro
+                realizou_cadastro: !!realizou_cadastro,
+                status: 'novo'
             }])
             .select();
 

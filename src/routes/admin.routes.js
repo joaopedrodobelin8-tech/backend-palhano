@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
         const { email, senha } = req.body;
 
         const { data: admin, error } = await supabase
-            .from('admins')
+            .from('users')
             .select('*')
             .eq('email', email)
             .single();
@@ -28,12 +28,12 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: admin.id, email: admin.email },
+            { id: admin.id, email: admin.email, role: admin.role },
             process.env.JWT_SECRET || 'secret_dev_palhano_xxx',
             { expiresIn: '8h' }
         );
 
-        res.json({ token, user: { email: admin.email } });
+        res.json({ token, user: { email: admin.email, role: admin.role } });
     } catch (err) {
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -45,7 +45,7 @@ router.use(authenticateToken);
 // GET /admin/simulacoes
 router.get('/simulacoes', async (req, res) => {
     try {
-        let query = supabase.from('simulacoes').select('*').order('data_simulacao', { ascending: false });
+        let query = supabase.from('leads').select('*').order('data_simulacao', { ascending: false });
 
         if (req.query.tipo_consorcio) {
             query = query.eq('tipo_consorcio', req.query.tipo_consorcio);
@@ -67,7 +67,7 @@ router.get('/simulacoes', async (req, res) => {
 router.get('/leads', async (req, res) => {
     try {
         const { data, error } = await supabase
-            .from('simulacoes')
+            .from('leads')
             .select('*')
             .eq('realizou_cadastro', true)
             .order('data_simulacao', { ascending: false });
@@ -86,7 +86,7 @@ router.patch('/simulacoes/:id/contato', async (req, res) => {
         const { contatado } = req.body;
 
         const { data, error } = await supabase
-            .from('simulacoes')
+            .from('leads')
             .update({ contatado })
             .eq('id', id)
             .select()
@@ -103,7 +103,7 @@ router.patch('/simulacoes/:id/contato', async (req, res) => {
 // GET /admin/stats
 router.get('/stats', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('simulacoes').select('*');
+        const { data, error } = await supabase.from('leads').select('*');
         if (error) throw error;
 
         const total_simulacoes = data.length;
@@ -135,7 +135,7 @@ router.get('/stats', async (req, res) => {
 router.get('/export', async (req, res) => {
     try {
         const { data, error } = await supabase
-            .from('simulacoes')
+            .from('leads')
             .select('*')
             .order('data_simulacao', { ascending: false });
 
