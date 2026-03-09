@@ -42,7 +42,23 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
     try {
-        const { data, error } = await supabase.from('leads').insert({ ...req.body, assigned_to: req.user.id }).select().single();
+        const insertData = { ...req.body, assigned_to: req.user.id };
+
+        // Auto-sync pipeline_stage_id if status is specified at creation
+        if (req.body.status && STATUS_TO_STAGE[req.body.status]) {
+            const stageName = STATUS_TO_STAGE[req.body.status];
+            const { data: stages } = await supabase
+                .from('pipeline_stages')
+                .select('id')
+                .eq('name', stageName)
+                .limit(1);
+
+            if (stages && stages.length > 0) {
+                insertData.pipeline_stage_id = stages[0].id;
+            }
+        }
+
+        const { data, error } = await supabase.from('leads').insert(insertData).select().single();
         if (error) throw error;
         res.status(201).json(data);
     } catch (err) {
@@ -50,10 +66,42 @@ router.post('/', async (req, res, next) => {
     }
 });
 
+const STATUS_TO_STAGE = {
+    'novo': 'Novo Lead',
+    'contato': 'Contato Iniciado',
+    'negociacao': 'Em Negociação',
+    'proposta': 'Proposta Enviada',
+    'aguardando': 'Aguardando Cliente',
+    'convertido': 'Convertido',
+    'perdido': 'Perdido'
+};
+
 router.patch('/:id', async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { data, error } = await supabase.from('leads').update({ ...req.body, ultima_interacao: new Date().toISOString() }).eq('id', id).select().single();
+        const updateData = { ...req.body, ultima_interacao: new Date().toISOString() };
+
+        // Auto-sync pipeline_stage_id if status is updated
+        if (req.body.status && STATUS_TO_STAGE[req.body.status]) {
+            const stageName = STATUS_TO_STAGE[req.body.status];
+            const { data: stages } = await supabase
+                .from('pipeline_stages')
+                .select('id')
+                .eq('name', stageName)
+                .limit(1);
+
+            if (stages && stages.length > 0) {
+                updateData.pipeline_stage_id = stages[0].id;
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('leads')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
         if (error) throw error;
         res.json(data);
     } catch (err) {
