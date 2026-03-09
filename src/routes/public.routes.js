@@ -27,6 +27,15 @@ router.post('/simulacoes', submitLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Dados obrigatórios faltando' });
         }
 
+        // Get the first stage ID as default
+        const { data: stages } = await supabase
+            .from('pipeline_stages')
+            .select('id')
+            .order('order', { ascending: true })
+            .limit(1);
+
+        const firstStageId = stages && stages.length > 0 ? stages[0].id : null;
+
         const { data, error } = await supabase
             .from('leads')
             .insert([{
@@ -36,7 +45,8 @@ router.post('/simulacoes', submitLimiter, async (req, res) => {
                 nome: nome || null,
                 whatsapp: whatsapp || null,
                 realizou_cadastro: !!realizou_cadastro,
-                status: 'novo'
+                status: 'novo',
+                pipeline_stage_id: firstStageId
             }])
             .select();
 
