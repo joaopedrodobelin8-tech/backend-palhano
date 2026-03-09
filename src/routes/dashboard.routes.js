@@ -48,11 +48,30 @@ router.get('/dashboard', async (req, res, next) => {
 
         const recent_leads = safeLeads.slice(0, 5);
 
+        // Calculate Trend (last 7 days)
+        const leads_by_day = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+            const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+            const dayEnd = dayStart + 86400000;
+
+            const count = safeLeads.filter(l => {
+                const d = new Date(l.data_simulacao).getTime();
+                return d >= dayStart && d < dayEnd;
+            }).length;
+
+            leads_by_day.push({ date: dateStr, count });
+        }
+
         res.json({
             total_leads,
             leads_today,
             pipeline,
-            recent_leads
+            recent_leads,
+            leads_by_day
         });
     } catch (err) {
         next(err);
